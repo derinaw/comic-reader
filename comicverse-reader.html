@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ComicVerse — Читалка</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bar: #141418;
+    --bar-border: rgba(255,255,255,.06);
+    --accent: #ff2d55;
+    --text: #eee;
+    --dim: #666;
+    --btn-bg: #1e1e24;
+    --btn-active: #2a2a32;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bar);
+    border-bottom: 1px solid var(--bar-border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .topbar-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar-link {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    background: var(--btn-bg);
+    padding: 5px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Page display ── */
+  .reader-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: #000;
+    -webkit-overflow-scrolling: touch;
+  }
+  .reader-area img,
+  .reader-area .placeholder-page {
+    width: 100%;
+    max-width: 680px;
+    display: block;
+  }
+  .placeholder-page {
+    aspect-ratio: 2/3;
+    background: linear-gradient(180deg, #111 0%, #1a1a22 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative;
+  }
+  .placeholder-page .page-icon {
+    font-size: 56px;
+    opacity: .6;
+  }
+  .placeholder-page .page-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dim);
+  }
+  /* Fake comic panel lines */
+  .placeholder-page::before {
+    content: '';
+    position: absolute;
+    inset: 16px;
+    border: 2px solid rgba(255,255,255,.04);
+    border-radius: 4px;
+  }
+  .placeholder-page .panels {
+    position: absolute;
+    inset: 24px;
+    display: grid;
+    gap: 6px;
+    opacity: .07;
+  }
+  .panels.layout-a { grid-template: 1fr 1fr / 1fr 1fr; }
+  .panels.layout-b { grid-template: 2fr 1fr / 1fr; }
+  .panels.layout-c { grid-template: 1fr 1fr 1fr / 1fr; }
+  .panels.layout-d { grid-template: 1fr 2fr / 1fr 1fr; }
+  .panel-cell {
+    border: 2px solid #fff;
+    border-radius: 3px;
+  }
+
+  /* ── Bottom nav ── */
+  .bottombar {
+    display: flex;
+    align-items: center;
+    background: var(--bar);
+    border-top: 1px solid var(--bar-border);
+    flex-shrink: 0;
+    z-index: 10;
+    padding: 6px 4px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 4px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background .15s;
+  }
+  .nav-btn:active { background: var(--btn-active); }
+  .nav-btn:disabled { opacity: .2; pointer-events: none; }
+  .nav-btn svg { width: 22px; height: 22px; }
+  .page-counter {
+    flex: 1.5;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--dim);
+    letter-spacing: .5px;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--dim);
+    font-weight: 700;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--btn-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Settings menu ── */
+  .settings-btn {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .settings-btn:active { background: var(--btn-active); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title" id="comicTitle">Загрузка...</span>
+  <a class="topbar-link" id="sourceLink" href="#" target="_blank" style="display:none;">
+    Источник ↗
+  </a>
+</div>
+
+<div class="reader-area" id="readerArea">
+  <div class="loading">
+    <div class="spinner"></div>
+    <span>Загружаем страницы...</span>
+  </div>
+</div>
+
+<div class="bottombar">
+  <button class="nav-btn" id="btnFirst" title="В начало">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><line x1="7" y1="12" x2="18" y2="12"/><line x1="18" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <button class="nav-btn" id="btnPrev" title="Назад">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <span class="page-counter" id="pageCounter">— / —</span>
+  <button class="nav-btn" id="btnNext" title="Вперёд">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <button class="nav-btn" id="btnLast" title="В конец">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><line x1="17" y1="12" x2="6" y2="12"/><line x1="6" y1="6" x2="6" y2="18"/></svg>
+  </button>
+  <button class="settings-btn" id="btnSettings" title="Настройки">⊞</button>
+</div>
+
+<script>
+// ────────────────────────────────────────────
+// Демо-данные (замените на API)
+// ────────────────────────────────────────────
+const COMICS_DATA = {
+  1: {
+    title: "Solo Leveling",
+    pages: 18,
+    // Когда подключите реальные данные:
+    // page_urls: ["https://cdn.../page1.jpg", ...]
+    page_urls: null,
+    source_url: null,
+  },
+  2: {
+    title: "One Punch Man",
+    pages: 22,
+    page_urls: null,
+    source_url: null,
+  },
+  3: {
+    title: "Chainsaw Man",
+    pages: 20,
+    page_urls: null,
+    source_url: null,
+  },
+  4: {
+    title: "Берсерк",
+    pages: 24,
+    page_urls: null,
+    source_url: null,
+  },
+  5: {
+    title: "Магическая Битва",
+    pages: 19,
+    page_urls: null,
+    source_url: null,
+  },
+};
+
+// ────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────
+let comic = null;
+let currentPage = 0;
+let totalPages = 0;
+
+// DOM
+const readerArea  = document.getElementById('readerArea');
+const comicTitle  = document.getElementById('comicTitle');
+const sourceLink  = document.getElementById('sourceLink');
+const pageCounter = document.getElementById('pageCounter');
+const btnFirst = document.getElementById('btnFirst');
+const btnPrev  = document.getElementById('btnPrev');
+const btnNext  = document.getElementById('btnNext');
+const btnLast  = document.getElementById('btnLast');
+
+// ────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────
+(function init() {
+  // Telegram WebApp setup
+  if (window.Telegram?.WebApp) {
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.ready();
+    tg.setHeaderColor('#141418');
+    tg.setBackgroundColor('#0a0a0a');
+  }
+
+  // Get comic ID from URL
+  const params = new URLSearchParams(window.location.search);
+  const id = parseInt(params.get('id'));
+
+  comic = COMICS_DATA[id];
+  if (!comic) {
+    readerArea.innerHTML = `
+      <div class="loading">
+        <span style="font-size:48px;">😕</span>
+        <span>Комикс не найден</span>
+      </div>`;
+    return;
+  }
+
+  comicTitle.textContent = comic.title;
+  totalPages = comic.pages;
+
+  if (comic.source_url) {
+    sourceLink.href = comic.source_url;
+    sourceLink.style.display = '';
+  }
+
+  // Load first page
+  currentPage = 0;
+  renderPage();
+
+  // Button handlers
+  btnFirst.addEventListener('click', () => goTo(0));
+  btnPrev.addEventListener('click',  () => goTo(currentPage - 1));
+  btnNext.addEventListener('click',  () => goTo(currentPage + 1));
+  btnLast.addEventListener('click',  () => goTo(totalPages - 1));
+
+  // Swipe support
+  let startX = 0, startY = 0;
+  readerArea.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  });
+  readerArea.addEventListener('touchend', e => {
+    const dx = startX - e.changedTouches[0].clientX;
+    const dy = Math.abs(startY - e.changedTouches[0].clientY);
+    if (Math.abs(dx) > 50 && dy < 80) {
+      goTo(currentPage + (dx > 0 ? 1 : -1));
+    }
+  });
+
+  // Keyboard support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  goTo(currentPage - 1);
+    if (e.key === 'ArrowRight') goTo(currentPage + 1);
+    if (e.key === 'Home')       goTo(0);
+    if (e.key === 'End')        goTo(totalPages - 1);
+  });
+})();
+
+// ────────────────────────────────────────────
+// NAVIGATION
+// ────────────────────────────────────────────
+function goTo(page) {
+  if (page < 0 || page >= totalPages) return;
+  currentPage = page;
+  renderPage();
+}
+
+function renderPage() {
+  // Update counter
+  pageCounter.textContent = `${currentPage + 1} / ${totalPages}`;
+
+  // Update buttons
+  btnFirst.disabled = btnPrev.disabled = currentPage === 0;
+  btnNext.disabled = btnLast.disabled = currentPage === totalPages - 1;
+
+  // Render page content
+  if (comic.page_urls && comic.page_urls[currentPage]) {
+    // Real image page
+    readerArea.innerHTML = `<img src="${comic.page_urls[currentPage]}" alt="Стр. ${currentPage + 1}">`;
+  } else {
+    // Placeholder page (demo)
+    const layouts = ['layout-a', 'layout-b', 'layout-c', 'layout-d'];
+    const layout = layouts[currentPage % layouts.length];
+    const cellCount = layout === 'layout-a' ? 4 : layout === 'layout-d' ? 4 : 3;
+    const cells = Array.from({length: cellCount}, () => '<div class="panel-cell"></div>').join('');
+    const icons = ['💥', '⚡', '🔥', '💫', '🗡', '👊', '🌀', '✨'];
+    const icon = icons[currentPage % icons.length];
+
+    readerArea.innerHTML = `
+      <div class="placeholder-page">
+        <div class="panels ${layout}">${cells}</div>
+        <div class="page-icon">${icon}</div>
+        <div class="page-label">${comic.title} — Стр. ${currentPage + 1}</div>
+      </div>`;
+  }
+
+  readerArea.scrollTop = 0;
+}
+</script>
+</body>
+</html>
