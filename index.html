@@ -72,13 +72,14 @@
     background: #000;
     -webkit-overflow-scrolling: touch;
   }
-  .reader-area img,
-  .reader-area .placeholder-page {
+  .reader-area img {
     width: 100%;
     max-width: 680px;
     display: block;
   }
   .placeholder-page {
+    width: 100%;
+    max-width: 680px;
     aspect-ratio: 2/3;
     background: linear-gradient(180deg, #111 0%, #1a1a22 100%);
     display: flex;
@@ -88,16 +89,8 @@
     gap: 12px;
     position: relative;
   }
-  .placeholder-page .page-icon {
-    font-size: 56px;
-    opacity: .6;
-  }
-  .placeholder-page .page-label {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--dim);
-  }
-  /* Fake comic panel lines */
+  .placeholder-page .page-icon { font-size: 56px; opacity:.6; }
+  .placeholder-page .page-label { font-size: 14px; font-weight: 700; color: var(--dim); }
   .placeholder-page::before {
     content: '';
     position: absolute;
@@ -106,20 +99,14 @@
     border-radius: 4px;
   }
   .placeholder-page .panels {
-    position: absolute;
-    inset: 24px;
-    display: grid;
-    gap: 6px;
-    opacity: .07;
+    position: absolute; inset: 24px;
+    display: grid; gap: 6px; opacity: .07;
   }
   .panels.layout-a { grid-template: 1fr 1fr / 1fr 1fr; }
   .panels.layout-b { grid-template: 2fr 1fr / 1fr; }
   .panels.layout-c { grid-template: 1fr 1fr 1fr / 1fr; }
   .panels.layout-d { grid-template: 1fr 2fr / 1fr 1fr; }
-  .panel-cell {
-    border: 2px solid #fff;
-    border-radius: 3px;
-  }
+  .panel-cell { border: 2px solid #fff; border-radius: 3px; }
 
   /* ── Bottom nav ── */
   .bottombar {
@@ -149,6 +136,7 @@
   }
   .nav-btn:active { background: var(--btn-active); }
   .nav-btn:disabled { opacity: .2; pointer-events: none; }
+  .nav-btn.active { color: var(--accent); }
   .nav-btn svg { width: 22px; height: 22px; }
   .page-counter {
     flex: 1.5;
@@ -157,6 +145,93 @@
     font-weight: 800;
     color: var(--dim);
     letter-spacing: .5px;
+  }
+
+  /* ── Grid overlay ── */
+  .grid-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .grid-overlay.open {
+    display: flex;
+    opacity: 1;
+  }
+  .grid-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bar);
+    border-bottom: 1px solid var(--bar-border);
+    flex-shrink: 0;
+  }
+  .grid-header-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .grid-close {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+  .grid-close:active { background: var(--btn-active); }
+  .grid-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    align-content: start;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grid-thumb {
+    aspect-ratio: 2/3;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    transition: border-color .15s;
+    background: #111;
+  }
+  .grid-thumb.current { border-color: var(--accent); }
+  .grid-thumb:active { opacity: .7; }
+  .grid-thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .grid-thumb-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #151520, #111);
+    font-size: 24px;
+    opacity: .5;
+  }
+  .grid-thumb-num {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(0,0,0,.7);
+    padding: 3px 0;
   }
 
   /* ── Loading ── */
@@ -179,17 +254,16 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Settings menu ── */
-  .settings-btn {
-    background: none;
-    border: none;
-    color: var(--dim);
-    font-size: 20px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
+  /* ── Image loading ── */
+  .page-loading {
+    width: 100%;
+    max-width: 680px;
+    aspect-ratio: 2/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #111;
   }
-  .settings-btn:active { background: var(--btn-active); }
 </style>
 </head>
 <body>
@@ -208,6 +282,15 @@
   </div>
 </div>
 
+<!-- Grid overlay (все страницы) -->
+<div class="grid-overlay" id="gridOverlay">
+  <div class="grid-header">
+    <span class="grid-header-title" id="gridTitle">Страницы</span>
+    <button class="grid-close" id="gridClose">Закрыть</button>
+  </div>
+  <div class="grid-body" id="gridBody"></div>
+</div>
+
 <div class="bottombar">
   <button class="nav-btn" id="btnFirst" title="В начало">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><line x1="7" y1="12" x2="18" y2="12"/><line x1="18" y1="6" x2="18" y2="18"/></svg>
@@ -222,70 +305,141 @@
   <button class="nav-btn" id="btnLast" title="В конец">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><line x1="17" y1="12" x2="6" y2="12"/><line x1="6" y1="6" x2="6" y2="18"/></svg>
   </button>
-  <button class="settings-btn" id="btnSettings" title="Настройки">⊞</button>
+  <button class="nav-btn" id="btnGrid" title="Все страницы">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  </button>
 </div>
 
 <script>
-// ────────────────────────────────────────────
-// Демо-данные (замените на API)
-// ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+//  ДАННЫЕ КОМИКСОВ
+//
+//  Чтобы добавить свой комикс — добавьте его сюда:
+//   page_urls: массив ссылок на каждую страницу (JPG/PNG)
+//
+//  Как найти ссылки на страницы:
+//   1. Откройте комикс на сайте-источнике
+//   2. ПКМ на странице → "Копировать адрес изображения"
+//   3. Вставьте ссылки в массив page_urls
+//
+//  Или используйте API сайта (см. функцию fetchFromAPI внизу)
+// ══════════════════════════════════════════════════════
 const COMICS_DATA = {
+
+  // ── Пример с реальными страницами (xkcd — public domain) ──
   1: {
     title: "Solo Leveling",
-    pages: 18,
-    // Когда подключите реальные данные:
-    // page_urls: ["https://cdn.../page1.jpg", ...]
-    page_urls: null,
+    pages: 6,
     source_url: null,
+    // Замените на реальные URL страниц вашего комикса:
+    page_urls: [
+      "https://imgs.xkcd.com/comics/barrel_cropped_(1).jpg",
+      "https://imgs.xkcd.com/comics/petit_prince.jpg",
+      "https://imgs.xkcd.com/comics/island_color.jpg",
+      "https://imgs.xkcd.com/comics/landscape_cropped_(1).jpg",
+      "https://imgs.xkcd.com/comics/blown_apart.jpg",
+      "https://imgs.xkcd.com/comics/irony_color.jpg",
+    ],
   },
+
   2: {
     title: "One Punch Man",
-    pages: 22,
-    page_urls: null,
+    pages: 5,
     source_url: null,
+    page_urls: [
+      "https://imgs.xkcd.com/comics/red_spiders_2.jpg",
+      "https://imgs.xkcd.com/comics/velociraptors.png",
+      "https://imgs.xkcd.com/comics/compiling.png",
+      "https://imgs.xkcd.com/comics/python.png",
+      "https://imgs.xkcd.com/comics/sandwich.png",
+    ],
   },
+
   3: {
     title: "Chainsaw Man",
-    pages: 20,
-    page_urls: null,
+    pages: 4,
     source_url: null,
+    page_urls: [
+      "https://imgs.xkcd.com/comics/duty_calls.png",
+      "https://imgs.xkcd.com/comics/exploits_of_a_mom.png",
+      "https://imgs.xkcd.com/comics/goto.png",
+      "https://imgs.xkcd.com/comics/standards.png",
+    ],
   },
+
   4: {
     title: "Берсерк",
-    pages: 24,
-    page_urls: null,
+    pages: 5,
     source_url: null,
+    page_urls: [
+      "https://imgs.xkcd.com/comics/useless.jpg",
+      "https://imgs.xkcd.com/comics/a_bunch_of_rocks.png",
+      "https://imgs.xkcd.com/comics/angular_momentum.jpg",
+      "https://imgs.xkcd.com/comics/nerd_sniping.png",
+      "https://imgs.xkcd.com/comics/purity.png",
+    ],
   },
+
   5: {
     title: "Магическая Битва",
-    pages: 19,
-    page_urls: null,
+    pages: 4,
     source_url: null,
+    page_urls: [
+      "https://imgs.xkcd.com/comics/convincing.png",
+      "https://imgs.xkcd.com/comics/machine_learning_2x.png",
+      "https://imgs.xkcd.com/comics/is_it_worth_the_time_2x.png",
+      "https://imgs.xkcd.com/comics/password_strength.png",
+    ],
   },
+
 };
 
-// ────────────────────────────────────────────
-// STATE
-// ────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════
+//  Пример: загрузка с API сайта (раскомментируйте)
+// ══════════════════════════════════════════════════════
+//
+// async function fetchFromAPI(comicId) {
+//   const resp = await fetch(`https://your-manga-api.com/comic/${comicId}/pages`);
+//   const data = await resp.json();
+//   return {
+//     title: data.title,
+//     pages: data.pages.length,
+//     page_urls: data.pages.map(p => p.image_url),
+//     source_url: data.url,
+//   };
+// }
+
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
 let comic = null;
 let currentPage = 0;
 let totalPages = 0;
+let gridOpen = false;
 
 // DOM
-const readerArea  = document.getElementById('readerArea');
-const comicTitle  = document.getElementById('comicTitle');
-const sourceLink  = document.getElementById('sourceLink');
-const pageCounter = document.getElementById('pageCounter');
-const btnFirst = document.getElementById('btnFirst');
-const btnPrev  = document.getElementById('btnPrev');
-const btnNext  = document.getElementById('btnNext');
-const btnLast  = document.getElementById('btnLast');
+const readerArea   = document.getElementById('readerArea');
+const comicTitle   = document.getElementById('comicTitle');
+const sourceLink   = document.getElementById('sourceLink');
+const pageCounter  = document.getElementById('pageCounter');
+const btnFirst     = document.getElementById('btnFirst');
+const btnPrev      = document.getElementById('btnPrev');
+const btnNext      = document.getElementById('btnNext');
+const btnLast      = document.getElementById('btnLast');
+const btnGrid      = document.getElementById('btnGrid');
+const gridOverlay  = document.getElementById('gridOverlay');
+const gridBody     = document.getElementById('gridBody');
+const gridTitle    = document.getElementById('gridTitle');
+const gridClose    = document.getElementById('gridClose');
 
-// ────────────────────────────────────────────
-// INIT
-// ────────────────────────────────────────────
-(function init() {
-  // Telegram WebApp setup
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+(async function init() {
+  // Telegram WebApp
   if (window.Telegram?.WebApp) {
     const tg = window.Telegram.WebApp;
     tg.expand();
@@ -294,11 +448,16 @@ const btnLast  = document.getElementById('btnLast');
     tg.setBackgroundColor('#0a0a0a');
   }
 
-  // Get comic ID from URL
+  // Get comic ID
   const params = new URLSearchParams(window.location.search);
   const id = parseInt(params.get('id'));
 
+  // Попытка загрузить из локальных данных
   comic = COMICS_DATA[id];
+
+  // Или из API (раскомментируйте):
+  // if (!comic) comic = await fetchFromAPI(id);
+
   if (!comic) {
     readerArea.innerHTML = `
       <div class="loading">
@@ -316,17 +475,20 @@ const btnLast  = document.getElementById('btnLast');
     sourceLink.style.display = '';
   }
 
-  // Load first page
   currentPage = 0;
   renderPage();
 
-  // Button handlers
+  // Navigation
   btnFirst.addEventListener('click', () => goTo(0));
   btnPrev.addEventListener('click',  () => goTo(currentPage - 1));
   btnNext.addEventListener('click',  () => goTo(currentPage + 1));
   btnLast.addEventListener('click',  () => goTo(totalPages - 1));
 
-  // Swipe support
+  // Grid button
+  btnGrid.addEventListener('click', toggleGrid);
+  gridClose.addEventListener('click', toggleGrid);
+
+  // Swipe
   let startX = 0, startY = 0;
   readerArea.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
@@ -340,18 +502,24 @@ const btnLast  = document.getElementById('btnLast');
     }
   });
 
-  // Keyboard support
+  // Keyboard
   document.addEventListener('keydown', e => {
+    if (gridOpen) {
+      if (e.key === 'Escape') toggleGrid();
+      return;
+    }
     if (e.key === 'ArrowLeft')  goTo(currentPage - 1);
     if (e.key === 'ArrowRight') goTo(currentPage + 1);
     if (e.key === 'Home')       goTo(0);
     if (e.key === 'End')        goTo(totalPages - 1);
+    if (e.key === 'g')          toggleGrid();
   });
 })();
 
-// ────────────────────────────────────────────
-// NAVIGATION
-// ────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════
 function goTo(page) {
   if (page < 0 || page >= totalPages) return;
   currentPage = page;
@@ -359,35 +527,96 @@ function goTo(page) {
 }
 
 function renderPage() {
-  // Update counter
   pageCounter.textContent = `${currentPage + 1} / ${totalPages}`;
-
-  // Update buttons
   btnFirst.disabled = btnPrev.disabled = currentPage === 0;
   btnNext.disabled = btnLast.disabled = currentPage === totalPages - 1;
 
-  // Render page content
-  if (comic.page_urls && comic.page_urls[currentPage]) {
-    // Real image page
-    readerArea.innerHTML = `<img src="${comic.page_urls[currentPage]}" alt="Стр. ${currentPage + 1}">`;
+  const url = comic.page_urls?.[currentPage];
+
+  if (url) {
+    // Show loading → then image
+    readerArea.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+    const img = new Image();
+    img.onload = () => {
+      readerArea.innerHTML = '';
+      img.style.cssText = 'width:100%;max-width:680px;display:block;';
+      readerArea.appendChild(img);
+    };
+    img.onerror = () => {
+      readerArea.innerHTML = `
+        <div class="loading">
+          <span style="font-size:36px;">⚠️</span>
+          <span>Не удалось загрузить страницу</span>
+        </div>`;
+    };
+    img.src = url;
+    img.alt = `Стр. ${currentPage + 1}`;
   } else {
-    // Placeholder page (demo)
+    // Placeholder
     const layouts = ['layout-a', 'layout-b', 'layout-c', 'layout-d'];
     const layout = layouts[currentPage % layouts.length];
-    const cellCount = layout === 'layout-a' ? 4 : layout === 'layout-d' ? 4 : 3;
-    const cells = Array.from({length: cellCount}, () => '<div class="panel-cell"></div>').join('');
-    const icons = ['💥', '⚡', '🔥', '💫', '🗡', '👊', '🌀', '✨'];
-    const icon = icons[currentPage % icons.length];
+    const n = layout === 'layout-b' ? 2 : layout === 'layout-c' ? 3 : 4;
+    const cells = Array.from({length: n}, () => '<div class="panel-cell"></div>').join('');
+    const icons = ['💥','⚡','🔥','💫','🗡','👊','🌀','✨'];
 
     readerArea.innerHTML = `
       <div class="placeholder-page">
         <div class="panels ${layout}">${cells}</div>
-        <div class="page-icon">${icon}</div>
+        <div class="page-icon">${icons[currentPage % icons.length]}</div>
         <div class="page-label">${comic.title} — Стр. ${currentPage + 1}</div>
       </div>`;
   }
-
   readerArea.scrollTop = 0;
+}
+
+
+// ══════════════════════════════════════════════════════
+//  GRID VIEW (сетка всех страниц)
+// ══════════════════════════════════════════════════════
+function toggleGrid() {
+  gridOpen = !gridOpen;
+  if (gridOpen) {
+    renderGrid();
+    gridOverlay.classList.add('open');
+    btnGrid.classList.add('active');
+  } else {
+    gridOverlay.classList.remove('open');
+    btnGrid.classList.remove('active');
+  }
+}
+
+function renderGrid() {
+  gridTitle.textContent = `${comic.title} — ${totalPages} стр.`;
+  const icons = ['💥','⚡','🔥','💫','🗡','👊','🌀','✨'];
+
+  gridBody.innerHTML = Array.from({length: totalPages}, (_, i) => {
+    const url = comic.page_urls?.[i];
+    const isCurrent = i === currentPage ? ' current' : '';
+    const inner = url
+      ? `<img src="${url}" loading="lazy" alt="Стр. ${i+1}">`
+      : `<div class="grid-thumb-placeholder">${icons[i % icons.length]}</div>`;
+
+    return `
+      <div class="grid-thumb${isCurrent}" data-page="${i}">
+        ${inner}
+        <div class="grid-thumb-num">${i + 1}</div>
+      </div>`;
+  }).join('');
+
+  // Click handler
+  gridBody.querySelectorAll('.grid-thumb').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = parseInt(el.dataset.page);
+      goTo(p);
+      toggleGrid();
+    });
+  });
+
+  // Scroll to current
+  requestAnimationFrame(() => {
+    const cur = gridBody.querySelector('.current');
+    if (cur) cur.scrollIntoView({ block: 'center', behavior: 'instant' });
+  });
 }
 </script>
 </body>
