@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>ComicVerse — Читалка</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
@@ -24,6 +24,7 @@
     min-height: 100vh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   /* ── Top bar ── */
@@ -39,9 +40,7 @@
     -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid rgba(255,255,255,.06);
     z-index: 100;
-    transition: transform .3s;
   }
-  .topbar.hidden { transform: translateY(-100%); }
   .topbar-title {
     flex: 1;
     font-size: 14px;
@@ -61,19 +60,16 @@
     white-space: nowrap;
   }
 
-  /* ── Reader area — continuous vertical scroll ── */
+  /* ── Reader — fixed width, centered, black bars on sides ── */
   .reader {
-    padding-top: 48px;   /* topbar height */
-    padding-bottom: 80px; /* nav height */
+    padding-top: 48px;
+    padding-bottom: 80px;
+    max-width: 480px;
+    margin: 0 auto;
   }
   .reader img {
     width: 100%;
     display: block;
-    /* No gaps between pages — seamless vertical scroll */
-  }
-  .page-divider {
-    height: 2px;
-    background: rgba(255,255,255,.03);
   }
 
   /* ── Placeholder page ── */
@@ -94,7 +90,7 @@
     font-size: 13px; font-weight: 700; color: rgba(255,255,255,.2);
   }
 
-  /* ── Bottom nav — separate floating buttons ── */
+  /* ── Bottom nav — separate buttons ── */
   .bottomnav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
@@ -106,10 +102,7 @@
     padding-bottom: max(10px, env(safe-area-inset-bottom));
     background: linear-gradient(to top, rgba(0,0,0,.95) 60%, transparent);
     z-index: 100;
-    transition: transform .3s;
   }
-  .bottomnav.hidden { transform: translateY(100%); }
-
   .nav-btn {
     display: flex;
     align-items: center;
@@ -128,14 +121,8 @@
     transform: scale(.92);
     background: var(--surface-light);
   }
-  .nav-btn:disabled {
-    opacity: .25;
-    pointer-events: none;
-  }
-  .nav-btn.accent {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
+  .nav-btn:disabled { opacity: .25; pointer-events: none; }
+  .nav-btn.active { color: var(--accent); }
   .nav-btn svg { width: 20px; height: 20px; }
 
   .page-pill {
@@ -171,9 +158,7 @@
     border-bottom: 1px solid rgba(255,255,255,.06);
     flex-shrink: 0;
   }
-  .grid-header-title {
-    flex: 1; font-size: 15px; font-weight: 800;
-  }
+  .grid-header-title { flex: 1; font-size: 15px; font-weight: 800; }
   .grid-close {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,.08);
@@ -224,7 +209,7 @@
     padding: 3px 0;
   }
 
-  /* ── Loading states ── */
+  /* ── Loading ── */
   .initial-loading {
     height: 100vh;
     display: flex;
@@ -244,16 +229,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .img-loading {
-    width: 100%;
-    aspect-ratio: 2/3;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #0a0a0e;
-  }
-
-  /* ── Scroll progress bar ── */
+  /* ── Progress bar ── */
   .progress-bar {
     position: fixed;
     top: 47px; left: 0;
@@ -267,16 +243,12 @@
 </head>
 <body>
 
-<!-- Top bar -->
 <div class="topbar" id="topbar">
   <span class="topbar-title" id="comicTitle">Загрузка...</span>
-  <a class="topbar-vpn" id="sourceLink" href="#" target="_blank" style="display:none;">
-    Источник ↗
-  </a>
+  <a class="topbar-vpn" id="sourceLink" href="#" target="_blank" style="display:none;">Источник ↗</a>
 </div>
 <div class="progress-bar" id="progressBar" style="width:0%"></div>
 
-<!-- Reader (vertical scroll) -->
 <div class="reader" id="reader">
   <div class="initial-loading">
     <div class="spinner"></div>
@@ -284,7 +256,6 @@
   </div>
 </div>
 
-<!-- Grid overlay -->
 <div class="grid-overlay" id="gridOverlay">
   <div class="grid-header">
     <span class="grid-header-title" id="gridTitle">Страницы</span>
@@ -293,12 +264,8 @@
   <div class="grid-body" id="gridBody"></div>
 </div>
 
-<!-- Bottom nav — separate buttons -->
 <div class="bottomnav" id="bottomnav">
-  <button class="nav-btn" id="btnUp" title="Наверх">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-  </button>
-  <button class="nav-btn" id="btnPrev" title="Пред. страница">
+  <button class="nav-btn" id="btnPrev" title="В начало">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="6" x2="5" y2="18"/><polyline points="17 18 9 12 17 6"/></svg>
   </button>
   <button class="nav-btn" id="btnPrevPage" title="Назад">
@@ -320,48 +287,58 @@
 // ══════════════════════════════════════════════════════
 //  ДАННЫЕ КОМИКСОВ
 //
-//  Как добавить комикс:
-//   1. Откройте комикс на вашем сайте-источнике
-//   2. ПКМ на картинке страницы → «Копировать адрес изображения»
-//   3. Вставьте URL в массив page_urls ниже
+//  Как добавить ссылки на страницы с com-x.life:
 //
-//  Или подключите API (пример внизу файла)
+//  Способ 1 (Быстрый — из браузера):
+//    1. Откройте комикс на com-x.life, нажмите «Читать»
+//    2. Откройте DevTools (F12) → Console
+//    3. Вставьте и выполните:
+//       document.querySelectorAll('.manga-img img, .reader-images img, img[data-src]').forEach((img,i) => console.log(img.src || img.dataset.src))
+//    4. Скопируйте URL-ы и вставьте в page_urls
+//
+//  Способ 2 (через Network tab):
+//    1. Откройте DevTools → Network → фильтр «Img»
+//    2. Откройте страницу чтения комикса
+//    3. Все загруженные картинки — это страницы
+//    4. ПКМ → Copy → Copy link address
+//
+//  Способ 3 (extract_urls.py — скрипт в этой папке):
+//    python extract_urls.py "https://com-x.life/readcomix/1315-thor-v3-read/1/1.html"
 // ══════════════════════════════════════════════════════
 const COMICS_DATA = {
 
   // ── Thor Vol. 3 ──
-  // Замените page_urls на реальные ссылки со страниц вашего сайта
   1: {
     title: "Thor Vol. 3",
-    source_url: null,
+    source_url: "https://com-x.life/1315-thor-v3-read.html",
     page_urls: [
-      "https://img.com-x.life/comix/1315/44144/1490735721_0.76063100.jpg",
-      "https://img.com-x.life/comix/1315/44144/1490735722_0.67340100.jpg",
-      "https://img.com-x.life/comix/1315/44144/1490735723_0.45057300.jpg",
-      "https://img.com-x.life/comix/1315/44144/1490735724_0.20682100.jpg",
-      "https://img.com-x.life/comix/1315/44144/1490735724_0.94471200.jpg",
-      "https://img.com-x.life/comix/1315/44144/1490735725_0.81213900.jpg",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
     ],
   },
 
   // ── Daredevil Vol. 1 ──
   2: {
     title: "Daredevil Vol. 1",
-    source_url: null,
+    source_url: "https://com-x.life/138-daredevil-v1.html",
     page_urls: [
       "https://img.com-x.life/comix/2124/528614/1722729163.8195.jpg",
-      "https://img.com-x.life/comix/2124/528614/1722729173.2992.jpg",
-      "https://img.com-x.life/comix/2124/528614/1722729172.8867.jpg",
-      "https://img.com-x.life/comix/2124/528614/1722729172.4732.jpg",
-      "https://img.com-x.life/comix/2124/528614/1722729172.0686.jpg",
-      "https://img.com-x.life/comix/2124/528614/1722729171.6603.jpg",
+      "",
+      "",
+      "",
+      "",
+      "",
     ],
   },
 
   // ── Алтимейт Человек-Паук Том 1 ──
   3: {
     title: "Алтимейт Человек-Паук Том 1",
-    source_url: null,
+    source_url: "https://com-x.life/ultimate-spider-man-v1.html",
     page_urls: [
       "https://img.com-x.life/comix/2170/612686/1734295611_0.92193100.jpg",
       "https://img.com-x.life/comix/2170/612686/1734295612_0.76221400.jpg",
@@ -376,32 +353,17 @@ const COMICS_DATA = {
   4: {
     title: "Solo Leveling",
     source_url: null,
-    page_urls: [
-      "https://img.com-x.life/comix/9117/137689/1634421666_0.61588000.jpg",
-      "https://img.com-x.life/comix/9117/137689/1634421667_0.02823700.jpg",
-      "https://img.com-x.life/comix/9117/137689/1634421667_0.31007400.jpg",
-      "https://img.com-x.life/comix/9117/137689/1634421667_0.69931700.jpg",
-      "https://img.com-x.life/comix/9117/137689/1634421668_0.03953300.jpg",
-      "https://img.com-x.life/comix/9117/137689/1634421668_0.50293800.jpg",
-    ],
+    page_urls: [],
   },
 
   // ── One Punch Man ──
   5: {
     title: "One Punch Man",
     source_url: null,
-    page_urls: [
-      "https://img.com-x.life/comix/3038/81053/1559993082_0.25014500.jpg",
-      "https://img.com-x.life/comix/3038/81053/1559993083_0.42629000.jpg",
-      "https://img.com-x.life/comix/3038/81053/1559993084_0.23208600.jpg",
-      "https://img.com-x.life/comix/3038/81053/1559993085_0.03327600.jpg",
-      "https://img.com-x.life/comix/3038/81053/1559993085_0.78190700.jpg",
-      "https://img.com-x.life/comix/3038/81053/1559993086_0.52068400.jpg",
-    ],
+    page_urls: [],
   },
 };
 
-// Кол-во заглушечных страниц если page_urls пуст
 const FALLBACK_PAGES = 6;
 
 
@@ -412,15 +374,12 @@ let comic = null;
 let totalPages = 0;
 let currentVisiblePage = 0;
 let gridOpen = false;
-let barsVisible = true;
 
 const reader      = document.getElementById('reader');
 const comicTitle   = document.getElementById('comicTitle');
 const sourceLink   = document.getElementById('sourceLink');
 const pagePill     = document.getElementById('pagePill');
 const progressBar  = document.getElementById('progressBar');
-const topbar       = document.getElementById('topbar');
-const bottomnav    = document.getElementById('bottomnav');
 const gridOverlay  = document.getElementById('gridOverlay');
 const gridBody     = document.getElementById('gridBody');
 const gridTitle    = document.getElementById('gridTitle');
@@ -503,7 +462,6 @@ function renderAllPages() {
 // ══════════════════════════════════════════════════════
 function setupScroll() {
   let ticking = false;
-
   window.addEventListener('scroll', () => {
     if (!ticking) {
       requestAnimationFrame(() => {
@@ -521,10 +479,8 @@ function onScroll() {
   const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
   progressBar.style.width = progress + '%';
 
-  // Determine which page is most visible
   const pages = reader.querySelectorAll('[data-page]');
   const viewMid = scrollTop + window.innerHeight * 0.4;
-
   let closestPage = 0;
   let closestDist = Infinity;
 
@@ -546,8 +502,6 @@ function onScroll() {
 
 function updatePageInfo(page) {
   pagePill.textContent = `${page + 1} / ${totalPages}`;
-
-  document.getElementById('btnUp').disabled = page === 0;
   document.getElementById('btnPrev').disabled = page === 0;
   document.getElementById('btnPrevPage').disabled = page === 0;
   document.getElementById('btnNextPage').disabled = page === totalPages - 1;
@@ -559,7 +513,6 @@ function updatePageInfo(page) {
 //  NAVIGATION
 // ══════════════════════════════════════════════════════
 function setupNav() {
-  document.getElementById('btnUp').addEventListener('click', () => scrollToPage(0));
   document.getElementById('btnPrev').addEventListener('click', () => scrollToPage(0));
   document.getElementById('btnPrevPage').addEventListener('click', () => scrollToPage(currentVisiblePage - 1));
   document.getElementById('btnNextPage').addEventListener('click', () => scrollToPage(currentVisiblePage + 1));
@@ -567,12 +520,8 @@ function setupNav() {
   document.getElementById('btnGrid').addEventListener('click', toggleGrid);
   document.getElementById('gridClose').addEventListener('click', toggleGrid);
 
-  // Keyboard
   document.addEventListener('keydown', e => {
-    if (gridOpen) {
-      if (e.key === 'Escape') toggleGrid();
-      return;
-    }
+    if (gridOpen) { if (e.key === 'Escape') toggleGrid(); return; }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowUp')   scrollToPage(currentVisiblePage - 1);
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') scrollToPage(currentVisiblePage + 1);
     if (e.key === 'Home') scrollToPage(0);
@@ -584,9 +533,7 @@ function setupNav() {
 function scrollToPage(idx) {
   if (idx < 0 || idx >= totalPages) return;
   const el = reader.querySelector(`[data-page="${idx}"]`);
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 
@@ -598,8 +545,10 @@ function toggleGrid() {
   if (gridOpen) {
     renderGrid();
     gridOverlay.classList.add('open');
+    document.getElementById('btnGrid').classList.add('active');
   } else {
     gridOverlay.classList.remove('open');
+    document.getElementById('btnGrid').classList.remove('active');
   }
 }
 
@@ -613,7 +562,6 @@ function renderGrid() {
     const inner = url
       ? `<img src="${url}" loading="lazy">`
       : `<div class="grid-thumb-ph">${icons[i % icons.length]}</div>`;
-
     return `
       <div class="grid-thumb${isCurrent}" data-gpage="${i}">
         ${inner}
@@ -633,21 +581,6 @@ function renderGrid() {
     if (cur) cur.scrollIntoView({ block: 'center', behavior: 'instant' });
   });
 }
-
-
-// ══════════════════════════════════════════════════════
-//  API EXAMPLE (раскомментируйте для динамической загрузки)
-// ══════════════════════════════════════════════════════
-//
-// async function fetchFromAPI(comicId) {
-//   const r = await fetch(`https://your-manga-api.com/comic/${comicId}/pages`);
-//   const d = await r.json();
-//   return {
-//     title: d.title,
-//     page_urls: d.pages.map(p => p.image_url),
-//     source_url: d.url,
-//   };
-// }
 </script>
 </body>
 </html>
