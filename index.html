@@ -245,7 +245,7 @@
 
 <div class="topbar" id="topbar">
   <span class="topbar-title" id="comicTitle">Загрузка...</span>
-  <a class="topbar-vpn" id="sourceLink" href="#" target="_blank" style="display:none;"></a>
+  <a class="topbar-vpn" id="sourceLink" href="#" target="_blank" style="display:none;">Источник ↗</a>
 </div>
 <div class="progress-bar" id="progressBar" style="width:0%"></div>
 
@@ -307,38 +307,37 @@
 // ══════════════════════════════════════════════════════
 const COMICS_DATA = {
 
-  // ── Thor Vol. 3 ──
   1: {
     title: "Thor Vol. 3",
-    source_url: "https://com-x.life/1315-thor-v3-read.html",
+    source_url: null,
     page_urls: [
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "https://img.com-x.life/comix/1315/44144/1490735721_0.76063100.jpg",
+      "https://img.com-x.life/comix/1315/44144/1490735722_0.67340100.jpg",
+      "https://img.com-x.life/comix/1315/44144/1490735723_0.45057300.jpg",
+      "https://img.com-x.life/comix/1315/44144/1490735724_0.20682100.jpg",
+      "https://img.com-x.life/comix/1315/44144/1490735724_0.94471200.jpg",
+      "https://img.com-x.life/comix/1315/44144/1490735725_0.81213900.jpg",
     ],
   },
 
   // ── Daredevil Vol. 1 ──
   2: {
     title: "Daredevil Vol. 1",
-    source_url: "https://com-x.life/138-daredevil-v1.html",
+    source_url: null,
     page_urls: [
       "https://img.com-x.life/comix/2124/528614/1722729163.8195.jpg",
-      "",
-      "",
-      "",
-      "",
-      "",
+      "https://img.com-x.life/comix/2124/528614/1722729173.2992.jpg",
+      "https://img.com-x.life/comix/2124/528614/1722729172.8867.jpg",
+      "https://img.com-x.life/comix/2124/528614/1722729172.4732.jpg",
+      "https://img.com-x.life/comix/2124/528614/1722729172.0686.jpg",
+      "https://img.com-x.life/comix/2124/528614/1722729171.6603.jpg",
     ],
   },
 
   // ── Алтимейт Человек-Паук Том 1 ──
   3: {
     title: "Алтимейт Человек-Паук Том 1",
-    source_url: "https://com-x.life/ultimate-spider-man-v1.html",
+    source_url: null,
     page_urls: [
       "https://img.com-x.life/comix/2170/612686/1734295611_0.92193100.jpg",
       "https://img.com-x.life/comix/2170/612686/1734295612_0.76221400.jpg",
@@ -353,14 +352,28 @@ const COMICS_DATA = {
   4: {
     title: "Solo Leveling",
     source_url: null,
-    page_urls: [],
+    page_urls: [
+      "https://img.com-x.life/comix/9117/137689/1634421666_0.61588000.jpg",
+      "https://img.com-x.life/comix/9117/137689/1634421667_0.02823700.jpg",
+      "https://img.com-x.life/comix/9117/137689/1634421667_0.31007400.jpg",
+      "https://img.com-x.life/comix/9117/137689/1634421667_0.69931700.jpg",
+      "https://img.com-x.life/comix/9117/137689/1634421668_0.03953300.jpg",
+      "https://img.com-x.life/comix/9117/137689/1634421668_0.50293800.jpg",
+    ],
   },
 
   // ── One Punch Man ──
   5: {
     title: "One Punch Man",
     source_url: null,
-    page_urls: [],
+    page_urls: [
+      "https://img.com-x.life/comix/3038/81053/1559993082_0.25014500.jpg",
+      "https://img.com-x.life/comix/3038/81053/1559993083_0.42629000.jpg",
+      "https://img.com-x.life/comix/3038/81053/1559993084_0.23208600.jpg",
+      "https://img.com-x.life/comix/3038/81053/1559993085_0.03327600.jpg",
+      "https://img.com-x.life/comix/3038/81053/1559993085_0.78190700.jpg",
+      "https://img.com-x.life/comix/3038/81053/1559993086_0.52068400.jpg",
+    ],
   },
 };
 
